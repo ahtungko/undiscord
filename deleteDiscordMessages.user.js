@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            Undiscord
-// @description     Delete all messages in a Discord channel or DM (Bulk deletion)
-// @version         5.2.3
+// @description     Undiscord 5.2.3, but with some fixes.
+// @version         5.2.4
 // @author          victornpb
 // @homepageURL     https://github.com/victornpb/undiscord
 // @supportURL      https://github.com/victornpb/undiscord/discussions
@@ -11,16 +11,15 @@
 // @license         MIT
 // @namespace       https://github.com/victornpb/deleteDiscordMessages
 // @icon            https://victornpb.github.io/undiscord/images/icon128.png
-// @downloadURL     https://raw.githubusercontent.com/victornpb/deleteDiscordMessages/master/deleteDiscordMessages.user.js
 // @contributionURL https://www.buymeacoffee.com/vitim
 // @grant           none
 // ==/UserScript==
 (function () {
 	'use strict';
-
+ 
 	/* rollup-plugin-baked-env */
-	const VERSION = "5.2.3";
-
+	const VERSION = "5.2.4";
+ 
 	var themeCss = (`
 /* undiscord window */
 #undiscord.browser { box-shadow: var(--elevation-stroke), var(--elevation-high); overflow: hidden; }
@@ -40,9 +39,8 @@
 #undiscord .input { font-size: 16px; box-sizing: border-box; width: 100%; border-radius: 3px; color: var(--text-normal); background-color: var(--input-background); border: none; transition: border-color 0.2s ease-in-out 0s; padding: 10px; height: 40px; }
 #undiscord fieldset { margin-top: 16px; }
 #undiscord .input-wrapper { display: flex; align-items: center; font-size: 16px; box-sizing: border-box; width: 100%; border-radius: 3px; color: var(--text-normal); background-color: var(--input-background); border: none; transition: border-color 0.2s ease-in-out 0s; }
-#undiscord input[type="text"],
 #undiscord input[type="search"],
-#undiscord input[type="password"],
+#undiscord input[type="text"],
 #undiscord input[type="datetime-local"],
 #undiscord input[type="number"],
 #undiscord input[type="range"] { font-size: 16px; box-sizing: border-box; width: 100%; border-radius: 3px; color: var(--text-normal); background-color: var(--input-background); border: none; transition: border-color 0.2s ease-in-out 0s; padding: 10px; height: 40px; }
@@ -91,7 +89,7 @@
 #undiscord .log-error { color: #f04747; }
 #undiscord .log-success { color: #43b581; }
 `);
-
+ 
 	var mainCss = (`
 /**** Undiscord Button ****/
 #undicord-btn { position: relative; width: auto; height: 24px; margin: 0 8px; cursor: pointer; color: var(--interactive-normal); flex: 0 0 auto; }
@@ -99,7 +97,7 @@
 #undicord-btn.running { color: var(--button-danger-background) !important; }
 #undicord-btn.running progress { display: block; }
 /**** Undiscord Interface ****/
-#undiscord { position: fixed; z-index: 100; top: 58px; right: 10px; display: flex; flex-direction: column; width: 800px; height: 80vh; min-width: 610px; max-width: 100vw; min-height: 448px; max-height: 100vh; color: var(--text-normal); border-radius: 4px; background-color: var(--background-secondary); box-shadow: var(--elevation-stroke), var(--elevation-high); will-change: top, left, width, height; }
+#undiscord { position: right; z-index: 100; top: 58px; right: 44px; display: flex; flex-direction: column; width: 800px; height: 80vh; min-width: 610px; max-width: 100vw; min-height: 448px; max-height: 100vh; color: var(--text-normal); border-radius: 4px; background-color: var(--background-secondary); box-shadow: var(--elevation-stroke), var(--elevation-high); will-change: top, left, width, height; }
 #undiscord .header .icon { cursor: pointer; }
 #undiscord .window-body { height: calc(100% - 48px); }
 #undiscord .sidebar { overflow: hidden scroll; overflow-y: auto; width: 270px; min-width: 250px; height: 100%; max-height: 100%; padding: 8px; background: var(--background-secondary); }
@@ -122,12 +120,12 @@
 #undiscord .importJson { display: flex; flex-direction: row; }
 #undiscord .importJson button { margin-left: 5px; width: fit-content; }
 `);
-
+ 
 	var dragCss = (`
 [name^="grab-"] { position: absolute; --size: 6px; --corner-size: 16px; --offset: -1px; z-index: 9; }
 [name^="grab-"]:hover{ background: rgba(128,128,128,0.1); }
 [name="grab-t"] { top: 0px; left: var(--corner-size); right: var(--corner-size); height: var(--size); margin-top: var(--offset); cursor: ns-resize; }
-[name="grab-r"] { top: var(--corner-size); bottom: var(--corner-size); right: 0px; width: var(--size); margin-right: var(--offset); 
+[name="grab-r"] { top: var(--corner-size); bottom: var(--corner-size); right: 0px; width: var(--size); margin-right: var(--offset);
   cursor: ew-resize; }
 [name="grab-b"] { bottom: 0px; left: var(--corner-size); right: var(--corner-size); height: var(--size); margin-bottom: var(--offset); cursor: ns-resize; }
 [name="grab-l"] { top: var(--corner-size); bottom: var(--corner-size); left: 0px; width: var(--size); margin-left: var(--offset); cursor: ew-resize; }
@@ -136,7 +134,7 @@
 [name="grab-br"] { bottom: 0px; right: 0px; width: var(--corner-size); height: var(--corner-size); margin-bottom: var(--offset); margin-right: var(--offset); cursor: nwse-resize; }
 [name="grab-bl"] { bottom: 0px; left: 0px; width: var(--corner-size); height: var(--corner-size); margin-bottom: var(--offset); margin-left: var(--offset); cursor: nesw-resize; }
 `);
-
+ 
 	var buttonHtml = (`
 <div id="undicord-btn" tabindex="0" role="button" aria-label="Delete Messages" title="Delete Messages with Undiscord">
     <svg aria-hidden="false" width="24" height="24" viewBox="0 0 24 24">
@@ -146,7 +144,7 @@
     <progress></progress>
 </div>
 `);
-
+ 
 	var undiscordTemplate = (`
 <div id="undiscord" class="browser container redact" style="display:none;">
     <div class="header">
@@ -355,7 +353,7 @@
                     </legend>
                     <div class="multiInput">
                         <div class="input-wrapper">
-                            <input class="input" id="token" type="password" autocomplete="dont" priv>
+                            <input class="input" id="token" type="text" priv>
                         </div>
                         <button id="getToken">fill</button>
                     </div>
@@ -365,7 +363,7 @@
             <div></div>
             <div class="info">
                 Undiscord {{VERSION}}
-                <br> victornpb
+                <br> xkabctt
             </div>
         </div>
         <div class="main col">
@@ -401,9 +399,9 @@
         </div>
     </div>
 </div>
-
+ 
 `);
-
+ 
 	const log = {
 	  debug() { return logFn ? logFn('debug', arguments) : console.debug.apply(console, arguments); },
 	  info() { return logFn ? logFn('info', arguments) : console.info.apply(console, arguments); },
@@ -412,10 +410,10 @@
 	  error() { return logFn ? logFn('error', arguments) : console.error.apply(console, arguments); },
 	  success() { return logFn ? logFn('success', arguments) : console.info.apply(console, arguments); },
 	};
-
+ 
 	var logFn; // custom console.log function
 	const setLogFn = (fn) => logFn = fn;
-
+ 
 	// Helpers
 	const wait = async ms => new Promise(done => setTimeout(done, ms));
 	const msToHMS = s => `${s / 3.6e6 | 0}h ${(s % 3.6e6) / 6e4 | 0}m ${(s % 6e4) / 1000 | 0}s`;
@@ -425,16 +423,16 @@
 	const ask = async msg => new Promise(resolve => setTimeout(() => resolve(window.confirm(msg)), 10));
 	const toSnowflake = (date) => /:/.test(date) ? ((new Date(date).getTime() - 1420070400000) * Math.pow(2, 22)) : date;
 	const replaceInterpolations = (str, obj, removeMissing = false) => str.replace(/\{\{([\w_]+)\}\}/g, (m, key) => obj[key] || (removeMissing ? '' : m));
-
+ 
 	const PREFIX$1 = '[UNDISCORD]';
-
+ 
 	/**
 	 * Delete all messages in a Discord channel or DM
 	 * @author Victornpb <https://www.github.com/victornpb>
 	 * @see https://github.com/victornpb/undiscord
 	 */
 	class UndiscordCore {
-
+ 
 	  options = {
 	    authToken: null, // Your authorization token
 	    authorId: null, // Author of the messages you want to delete
@@ -453,7 +451,7 @@
 	    maxAttempt: 2, // Attempts to delete a single message if it fails
 	    askForConfirmation: true,
 	  };
-
+ 
 	  state = {
 	    running: false,
 	    delCount: 0,
@@ -461,12 +459,12 @@
 	    grandTotal: 0,
 	    offset: 0,
 	    iterations: 0,
-
+ 
 	    _seachResponse: null,
 	    _messagesToDelete: [],
 	    _skippedMessages: [],
 	  };
-
+ 
 	  stats = {
 	    startTime: new Date(), // start time
 	    throttledCount: 0, // how many times you have been throttled
@@ -475,12 +473,12 @@
 	    avgPing: null, // average ping used to calculate the estimated remaining time
 	    etr: 0,
 	  };
-
+ 
 	  // events
 	  onStart = undefined;
 	  onProgress = undefined;
 	  onStop = undefined;
-
+ 
 	  resetState() {
 	    this.state = {
 	      running: false,
@@ -489,50 +487,50 @@
 	      grandTotal: 0,
 	      offset: 0,
 	      iterations: 0,
-
+ 
 	      _seachResponse: null,
 	      _messagesToDelete: [],
 	      _skippedMessages: [],
 	    };
-
+ 
 	    this.options.askForConfirmation = true;
 	  }
-
+ 
 	  /** Automate the deletion process of multiple channels */
 	  async runBatch(queue) {
 	    if (this.state.running) return log.error('Already running!');
-
+ 
 	    log.info(`Runnning batch with queue of ${queue.length} jobs`);
 	    for (let i = 0; i < queue.length; i++) {
 	      const job = queue[i];
 	      log.info('Starting job...', `(${i + 1}/${queue.length})`);
-
+ 
 	      // set options
 	      this.options = {
 	        ...this.options, // keep current options
 	        ...job, // override with options for that job
 	      };
-
+ 
 	      await this.run(true);
 	      if (!this.state.running) break;
-
+ 
 	      log.info('Job ended.', `(${i + 1}/${queue.length})`);
 	      this.resetState();
 	      this.options.askForConfirmation = false;
 	      this.state.running = true; // continue running
 	    }
-
+ 
 	    log.info('Batch finished.');
 	    this.state.running = false;
 	  }
-
+ 
 	  /** Start the deletion process */
 	  async run(isJob = false) {
 	    if (this.state.running && !isJob) return log.error('Already running!');
-
+ 
 	    this.state.running = true;
 	    this.stats.startTime = new Date();
-
+ 
 	    log.success(`\nStarted at ${this.stats.startTime.toLocaleString()}`);
 	    log.debug(
 	      `authorId = "${redact(this.options.authorId)}"`,
@@ -543,19 +541,19 @@
 	      `hasLink = ${!!this.options.hasLink}`,
 	      `hasFile = ${!!this.options.hasFile}`,
 	    );
-
+ 
 	    if (this.onStart) this.onStart(this.state, this.stats);
-
+ 
 	    do {
 	      this.state.iterations++;
-
+ 
 	      log.verb('Fetching messages...');
 	      // Search messages
 	      await this.search();
-
+ 
 	      // Process results and find which messages should be deleted
 	      await this.filterResponse();
-
+ 
 	      log.verb(
 	        `Grand total: ${this.state.grandTotal}`,
 	        `(Messages in current page: ${this.state._seachResponse.messages.length}`,
@@ -564,19 +562,21 @@
 	        `offset: ${this.state.offset}`
 	      );
 	      this.printStats();
-
+ 
 	      // Calculate estimated time
 	      this.calcEtr();
 	      log.verb(`Estimated time remaining: ${msToHMS(this.stats.etr)}`);
-
+ 
+      const messagesRemaining = this.state.grandTotal - this.state.offset;
+ 
 	      // if there are messages to delete, delete them
 	      if (this.state._messagesToDelete.length > 0) {
-
+ 
 	        if (await this.confirm() === false) {
 	          this.state.running = false; // break out of a job
 	          break; // immmediately stop this iteration
 	        }
-
+ 
 	        await this.deleteMessagesFromList();
 	      }
 	      else if (this.state._skippedMessages.length > 0) {
@@ -587,51 +587,56 @@
 	        log.verb('There\'s nothing we can delete on this page, checking next page...');
 	        log.verb(`Skipped ${this.state._skippedMessages.length} out of ${this.state._seachResponse.messages.length} in this page.`, `(Offset was ${oldOffset}, ajusted to ${this.state.offset})`);
 	      }
+ 
+      else if (this.state.delCount < messagesRemaining) {
+        log.verb('There\'s messages remaining, checking next page...');
+      }
+ 
 	      else {
 	        log.verb('Ended because API returned an empty page.');
 	        log.verb('[End state]', this.state);
 	        if (isJob) break; // break without stopping if this is part of a job
 	        this.state.running = false;
 	      }
-
+ 
 	      // wait before next page (fix search page not updating fast enough)
 	      log.verb(`Waiting ${(this.options.searchDelay / 1000).toFixed(2)}s before next page...`);
 	      await wait(this.options.searchDelay);
-
+ 
 	    } while (this.state.running);
-
+ 
 	    this.stats.endTime = new Date();
 	    log.success(`Ended at ${this.stats.endTime.toLocaleString()}! Total time: ${msToHMS(this.stats.endTime.getTime() - this.stats.startTime.getTime())}`);
 	    this.printStats();
 	    log.debug(`Deleted ${this.state.delCount} messages, ${this.state.failCount} failed.\n`);
-
+ 
 	    if (this.onStop) this.onStop(this.state, this.stats);
 	  }
-
+ 
 	  stop() {
 	    this.state.running = false;
 	    if (this.onStop) this.onStop(this.state, this.stats);
 	  }
-
+ 
 	  /** Calculate the estimated time remaining based on the current stats */
 	  calcEtr() {
 	    this.stats.etr = (this.options.searchDelay * Math.round(this.state.grandTotal / 25)) + ((this.options.deleteDelay + this.stats.avgPing) * this.state.grandTotal);
 	  }
-
+ 
 	  /** As for confirmation in the beggining process */
 	  async confirm() {
 	    if (!this.options.askForConfirmation) return true;
-
+ 
 	    log.verb('Waiting for your confirmation...');
 	    const preview = this.state._messagesToDelete.map(m => `${m.author.username}#${m.author.discriminator}: ${m.attachments.length ? '[ATTACHMENTS]' : m.content}`).join('\n');
-
+ 
 	    const answer = await ask(
 	      `Do you want to delete ~${this.state.grandTotal} messages? (Estimated time: ${msToHMS(this.stats.etr)})` +
 	      '(The actual number of messages may be less, depending if you\'re using filters to skip some messages)' +
 	      '\n\n---- Preview ----\n' +
 	      preview
 	    );
-
+ 
 	    if (!answer) {
 	      log.error('Aborted by you!');
 	      return false;
@@ -642,12 +647,12 @@
 	      return true;
 	    }
 	  }
-
+ 
 	  async search() {
 	    let API_SEARCH_URL;
 	    if (this.options.guildId === '@me') API_SEARCH_URL = `https://discord.com/api/v9/channels/${this.options.channelId}/messages/`; // DMs
 	    else API_SEARCH_URL = `https://discord.com/api/v9/guilds/${this.options.guildId}/messages/`; // Server
-
+ 
 	    let resp;
 	    try {
 	      this.beforeRequest();
@@ -674,7 +679,7 @@
 	      log.error('Search request threw an error:', err);
 	      throw err;
 	    }
-
+ 
 	    // not indexed yet
 	    if (resp.status === 202) {
 	      let w = (await resp.json()).retry_after * 1000;
@@ -685,13 +690,13 @@
 	      await wait(w);
 	      return await this.search();
 	    }
-
+ 
 	    if (!resp.ok) {
 	      // searching messages too fast
 	      if (resp.status === 429) {
 	        let w = (await resp.json()).retry_after * 1000;
 	        w = w || this.stats.searchDelay; // Fix retry_after 0
-
+ 
 	        this.stats.throttledCount++;
 	        this.stats.throttledTotalTime += w;
 	        this.stats.searchDelay += w; // increase delay
@@ -699,7 +704,7 @@
 	        log.warn(`Being rate limited by the API for ${w}ms! Increasing search delay...`);
 	        this.printStats();
 	        log.verb(`Cooling down for ${w * 2}ms before retrying...`);
-
+ 
 	        await wait(w * 2);
 	        return await this.search();
 	      }
@@ -714,22 +719,22 @@
 	    console.log(PREFIX$1, 'search', data);
 	    return data;
 	  }
-
+ 
 	  async filterResponse() {
 	    const data = this.state._seachResponse;
-
+ 
 	    // the search total will decrease as we delete stuff
 	    const total = data.total_results;
 	    if (total > this.state.grandTotal) this.state.grandTotal = total;
-
+ 
 	    // search returns messages near the the actual message, only get the messages we searched for.
 	    const discoveredMessages = data.messages.map(convo => convo.find(message => message.hit === true));
-
+ 
 	    // we can only delete some types of messages, system messages are not deletable.
 	    let messagesToDelete = discoveredMessages;
 	    messagesToDelete = messagesToDelete.filter(msg => msg.type === 0 || (msg.type >= 6 && msg.type <= 21));
 	    messagesToDelete = messagesToDelete.filter(msg => msg.pinned ? this.options.includePinned : true);
-
+ 
 	    // custom filter of messages
 	    try {
 	      const regex = new RegExp(this.options.pattern, 'i');
@@ -737,21 +742,21 @@
 	    } catch (e) {
 	      log.warn('Ignoring RegExp because pattern is malformed!', e);
 	    }
-
+ 
 	    // create an array containing everything we skipped. (used to calculate offset for next searches)
 	    const skippedMessages = discoveredMessages.filter(msg => !messagesToDelete.find(m => m.id === msg.id));
-
+ 
 	    this.state._messagesToDelete = messagesToDelete;
 	    this.state._skippedMessages = skippedMessages;
-
+ 
 	    console.log(PREFIX$1, 'filterResponse', this.state);
 	  }
-
+ 
 	  async deleteMessagesFromList() {
 	    for (let i = 0; i < this.state._messagesToDelete.length; i++) {
 	      const message = this.state._messagesToDelete[i];
 	      if (!this.state.running) return log.error('Stopped by you!');
-
+ 
 	      log.debug(
 	        // `${((this.state.delCount + 1) / this.state.grandTotal * 100).toFixed(2)}%`,
 	        `[${this.state.delCount + 1}/${this.state.grandTotal}] ` +
@@ -761,12 +766,12 @@
 	        (message.attachments.length ? redact(JSON.stringify(message.attachments)) : ''),
 	        `<sup>{ID:${redact(message.id)}}</sup>`
 	      );
-
+ 
 	      // Delete a single message (with retry)
 	      let attempt = 0;
 	      while (attempt < this.options.maxAttempt) {
 	        const result = await this.deleteMessage(message);
-
+ 
 	        if (result === 'RETRY') {
 	          attempt++;
 	          log.verb(`Retrying in ${this.options.deleteDelay}ms... (${attempt}/${this.options.maxAttempt})`);
@@ -774,14 +779,14 @@
 	        }
 	        else break;
 	      }
-
+ 
 	      this.calcEtr();
 	      if (this.onProgress) this.onProgress(this.state, this.stats);
-
+ 
 	      await wait(this.options.deleteDelay);
 	    }
 	  }
-
+ 
 	  async deleteMessage(message) {
 	    const API_DELETE_URL = `https://discord.com/api/v9/channels/${message.channel_id}/messages/${message.id}`;
 	    let resp;
@@ -801,7 +806,7 @@
 	      this.state.failCount++;
 	      return 'FAILED';
 	    }
-
+ 
 	    if (!resp.ok) {
 	      if (resp.status === 429) {
 	        // deleting messages too fast
@@ -816,10 +821,10 @@
 	        return 'RETRY';
 	      } else {
 	        const body = await resp.text();
-
+ 
 	        try {
 	          const r = JSON.parse(body);
-
+ 
 	          if (resp.status === 400 && r.code === 50083) {
 	            // 400 can happen if the thread is archived (code=50083)
 	            // in this case we need to "skip" this message from the next search
@@ -829,7 +834,7 @@
 	            this.state.failCount++;
 	            return 'FAIL_SKIP'; // Failed but we will skip it next time
 	          }
-
+ 
 	          log.error(`Error deleting message, API responded with status ${resp.status}!`, r);
 	          log.verb('Related object:', redact(JSON.stringify(message)));
 	          this.state.failCount++;
@@ -839,11 +844,11 @@
 	        }
 	      }
 	    }
-
+ 
 	    this.state.delCount++;
 	    return 'OK';
 	  }
-
+ 
 	  #beforeTs = 0; // used to calculate latency
 	  beforeRequest() {
 	    this.#beforeTs = Date.now();
@@ -852,7 +857,7 @@
 	    this.stats.lastPing = (Date.now() - this.#beforeTs);
 	    this.stats.avgPing = this.stats.avgPing > 0 ? (this.stats.avgPing * 0.9) + (this.stats.lastPing * 0.1) : this.stats.lastPing;
 	  }
-
+ 
 	  printStats() {
 	    log.verb(
 	      `Delete delay: ${this.options.deleteDelay}ms, Search delay: ${this.options.searchDelay}ms`,
@@ -864,7 +869,7 @@
 	    );
 	  }
 	}
-
+ 
 	const MOVE = 0;
 	const RESIZE_T = 1;
 	const RESIZE_B = 2;
@@ -874,7 +879,7 @@
 	const RESIZE_TR = RESIZE_T + RESIZE_R;
 	const RESIZE_BL = RESIZE_B + RESIZE_L;
 	const RESIZE_BR = RESIZE_B + RESIZE_R;
-
+ 
 	/**
 	 * Make an element draggable/resizable
 	 * @author Victor N. wwww.vitim.us
@@ -899,11 +904,11 @@
 	    }, options);
 	    Object.assign(this, options);
 	    options = undefined;
-
+ 
 	    elm.style.position = 'fixed';
-
+ 
 	    this.drag_m = new Draggable(elm, moveHandle, MOVE, this.options);
-
+ 
 	    if (this.options.createHandlers) {
 	      this.el_t = createElement('div', { name: 'grab-t' }, elm);
 	      this.drag_t = new Draggable(elm, this.el_t, RESIZE_T, this.options);
@@ -924,21 +929,21 @@
 	    }
 	  }
 	}
-
+ 
 	class Draggable {
 	  constructor(targetElm, handleElm, op, options) {
 	    Object.assign(this, options);
 	    options = undefined;
-
+ 
 	    this._targetElm = targetElm;
 	    this._handleElm = handleElm;
-
+ 
 	    let vw = window.innerWidth;
 	    let vh = window.innerHeight;
 	    let initialX, initialY, initialT, initialL, initialW, initialH;
-
+ 
 	    const clamp = (value, min, max) => value < min ? min : value > max ? max : value;
-
+ 
 	    const moveOp = (x, y) => {
 	      const deltaX = (x - initialX);
 	      const deltaY = (y - initialY);
@@ -947,7 +952,7 @@
 	      this._targetElm.style.top = t + 'px';
 	      this._targetElm.style.left = l + 'px';
 	    };
-
+ 
 	    const resizeOp = (x, y) => {
 	      x = clamp(x, 0, vw);
 	      y = clamp(y, 0, vh);
@@ -978,9 +983,9 @@
 	        this._targetElm.style.width = w + 'px';
 	      }
 	    };
-
+ 
 	    let operation = op === MOVE ? moveOp : resizeOp;
-
+ 
 	    function dragStartHandler(e) {
 	      const touch = e.type === 'touchstart';
 	      if ((e.buttons === 1 || e.which === 1) || touch) {
@@ -1006,7 +1011,7 @@
 	        this._targetElm.classList.add(this.draggingClass);
 	      }
 	    }
-
+ 
 	    function dragMoveHandler(e) {
 	      e.preventDefault();
 	      let x, y;
@@ -1028,7 +1033,7 @@
 	      // perform drag / resize operation
 	      operation(x, y);
 	    }
-
+ 
 	    function dragEndHandler(e) {
 	      if (this.useMouseEvents) {
 	        document.removeEventListener('mousemove', this._dragMoveHandler);
@@ -1040,22 +1045,22 @@
 	      }
 	      this._targetElm.classList.remove(this.draggingClass);
 	    }
-
+ 
 	    // We need to bind the handlers to this instance
 	    this._dragStartHandler = dragStartHandler.bind(this);
 	    this._dragMoveHandler = dragMoveHandler.bind(this);
 	    this._dragEndHandler = dragEndHandler.bind(this);
-
+ 
 	    this.enable();
 	  }
-
+ 
 	  /** Turn on the drag and drop of the instance */
 	  enable() {
 	    this.destroy(); // prevent events from getting binded twice
 	    if (this.useMouseEvents) this._handleElm.addEventListener('mousedown', this._dragStartHandler);
 	    if (this.useTouchEvents) this._handleElm.addEventListener('touchstart', this._dragStartHandler, { passive: false });
 	  }
-
+ 
 	  /** Teardown all events bound to the document and elements. You can resurrect this instance by calling enable() */
 	  destroy() {
 	    this._targetElm.classList.remove(this.draggingClass);
@@ -1071,14 +1076,14 @@
 	    }
 	  }
 	}
-
+ 
 	function createElement(tag='div', attrs, parent) {
 	  const elm = document.createElement(tag);
 	  if (attrs) Object.entries(attrs).forEach(([k, v]) => elm.setAttribute(k, v));
 	  if (parent) parent.appendChild(elm);
 	  return elm;
 	}
-
+ 
 	function defaultArgs(defaults, options) {
 	  function isObj(x) { return x !== null && typeof x === 'object'; }
 	  function hasOwn(obj, prop) { return Object.prototype.hasOwnProperty.call(obj, prop); }
@@ -1090,26 +1095,26 @@
 	  }
 	  return defaults;
 	}
-
+ 
 	function createElm(html) {
 	  const temp = document.createElement('div');
 	  temp.innerHTML = html;
 	  return temp.removeChild(temp.firstElementChild);
 	}
-
+ 
 	function insertCss(css) {
 	  const style = document.createElement('style');
 	  style.appendChild(document.createTextNode(css));
 	  document.head.appendChild(style);
 	  return style;
 	}
-
+ 
 	const messagePickerCss = `
 body.undiscord-pick-message [data-list-id="chat-messages"] {
   background-color: var(--background-secondary-alt);
   box-shadow: inset 0 0 0px 2px var(--button-outline-brand-border);
 }
-
+ 
 body.undiscord-pick-message [id^="message-content-"]:hover {
   cursor: pointer;
   cursor: cell;
@@ -1140,7 +1145,7 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
   content: 'After 👇';
 }
 `;
-
+ 
 	const messagePicker = {
 	  init() {
 	    insertCss(messagePickerCss);
@@ -1170,7 +1175,7 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	  }
 	};
 	window.messagePicker = messagePicker;
-
+ 
 	function getToken() {
 	  window.dispatchEvent(new Event('beforeunload'));
 	  const LS = document.body.appendChild(document.createElement('iframe')).contentWindow.localStorage;
@@ -1182,24 +1187,24 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	    return (window.webpackChunkdiscord_app.push([[''], {}, e => { window.m = []; for (let c in e.c) window.m.push(e.c[c]); }]), window.m).find(m => m?.exports?.default?.getToken !== void 0).exports.default.getToken();
 	  }
 	}
-
+ 
 	function getAuthorId() {
 	  const LS = document.body.appendChild(document.createElement('iframe')).contentWindow.localStorage;
 	  return JSON.parse(LS.user_id_cache);
 	}
-
+ 
 	function getGuildId() {
 	  const m = location.href.match(/channels\/([\w@]+)\/(\d+)/);
 	  if (m) return m[1];
 	  else alert('Could not find the Guild ID!\nPlease make sure you are on a Server or DM.');
 	}
-
+ 
 	function getChannelId() {
 	  const m = location.href.match(/channels\/([\w@]+)\/(\d+)/);
 	  if (m) return m[2];
 	  else alert('Could not find the Channel ID!\nPlease make sure you are on a Channel or DM.');
 	}
-
+ 
 	function fillToken() {
 	  try {
 	    return getToken();
@@ -1211,37 +1216,37 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	  }
 	  return '';
 	}
-
+ 
 	const PREFIX = '[UNDISCORD]';
-
+ 
 	// -------------------------- User interface ------------------------------- //
-
+ 
 	// links
 	const HOME = 'https://github.com/victornpb/undiscord';
 	const WIKI = 'https://github.com/victornpb/undiscord/wiki';
-
+ 
 	const undiscordCore = new UndiscordCore();
 	messagePicker.init();
-
+ 
 	const ui = {
 	  undiscordWindow: null,
 	  undiscordBtn: null,
 	  logArea: null,
 	  autoScroll: null,
-
+ 
 	  // progress handler
 	  progressMain: null,
 	  progressIcon: null,
 	  percent: null,
 	};
 	const $ = s => ui.undiscordWindow.querySelector(s);
-
+ 
 	function initUI() {
-
+ 
 	  insertCss(themeCss);
 	  insertCss(mainCss);
 	  insertCss(dragCss);
-
+ 
 	  // create undiscord window
 	  const undiscordUI = replaceInterpolations(undiscordTemplate, {
 	    VERSION,
@@ -1250,10 +1255,10 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	  });
 	  ui.undiscordWindow = createElm(undiscordUI);
 	  document.body.appendChild(ui.undiscordWindow);
-
+ 
 	  // enable drag and resize on undiscord window
 	  new DragResize({ elm: ui.undiscordWindow, moveHandle: $('.header') });
-
+ 
 	  // create undiscord Trash icon
 	  ui.undiscordBtn = createElm(buttonHtml);
 	  ui.undiscordBtn.onclick = toggleWindow;
@@ -1273,7 +1278,7 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	    }, 3000);
 	  });
 	  observer.observe(discordElm, { attributes: false, childList: true, subtree: true });
-
+ 
 	  function toggleWindow() {
 	    if (ui.undiscordWindow.style.display !== 'none') {
 	      ui.undiscordWindow.style.display = 'none';
@@ -1284,14 +1289,14 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	      ui.undiscordBtn.style.color = 'var(--interactive-active)';
 	    }
 	  }
-
+ 
 	  // cached elements
 	  ui.logArea = $('#logArea');
 	  ui.autoScroll = $('#autoScroll');
 	  ui.progressMain = $('#progressBar');
 	  ui.progressIcon = ui.undiscordBtn.querySelector('progress');
 	  ui.percent = $('#progressPercent');
-
+ 
 	  // register event listeners
 	  $('#hide').onclick = toggleWindow;
 	  $('#toggleSidebar').onclick = ()=> ui.undiscordWindow.classList.toggle('hide-sidebar');
@@ -1326,7 +1331,7 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	    toggleWindow();
 	  };
 	  $('button#getToken').onclick = () => $('input#token').value = fillToken();
-
+ 
 	  // sync delays
 	  $('input#searchDelay').onchange = (e) => {
 	    const v = parseInt(e.target.value);
@@ -1336,29 +1341,29 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	    const v = parseInt(e.target.value);
 	    if (v) undiscordCore.options.deleteDelay = v;
 	  };
-
+ 
 	  $('input#searchDelay').addEventListener('input', (event) => {
 	    $('div#searchDelayValue').textContent = event.target.value + 'ms';
 	  });
 	  $('input#deleteDelay').addEventListener('input', (event) => {
 	    $('div#deleteDelayValue').textContent = event.target.value + 'ms';
 	  });
-
+ 
 	  // import json
 	  const fileSelection = $('input#importJsonInput');
 	  fileSelection.onchange = async () => {
 	    const files = fileSelection.files;
-
+ 
 	    // No files added
 	    if (files.length === 0) return log.warn('No file selected.');
-
+ 
 	    // Get channel id field to set it later
 	    const channelIdField = $('input#channelId');
-
+ 
 	    // Force the guild id to be ourself (@me)
 	    const guildIdField = $('input#guildId');
 	    guildIdField.value = '@me';
-
+ 
 	    // Set author id in case its not set already
 	    $('input#authorId').value = getAuthorId();
 	    try {
@@ -1372,46 +1377,46 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	      log.error('Error parsing file!', err);
 	    }
 	  };
-
+ 
 	  // redirect console logs to inside the window after setting up the UI
 	  setLogFn(printLog);
-
+ 
 	  setupUndiscordCore();
 	}
-
+ 
 	function printLog(type = '', args) {
 	  ui.logArea.insertAdjacentHTML('beforeend', `<div class="log log-${type}">${Array.from(args).map(o => typeof o === 'object' ? JSON.stringify(o, o instanceof Error && Object.getOwnPropertyNames(o)) : o).join('\t')}</div>`);
 	  if (ui.autoScroll.checked) ui.logArea.querySelector('div:last-child').scrollIntoView(false);
 	  if (type==='error') console.error(PREFIX, ...Array.from(args));
 	}
-
+ 
 	function setupUndiscordCore() {
-
+ 
 	  undiscordCore.onStart = (state, stats) => {
 	    console.log(PREFIX, 'onStart', state, stats);
 	    $('#start').disabled = true;
 	    $('#stop').disabled = false;
-
+ 
 	    ui.undiscordBtn.classList.add('running');
 	    ui.progressMain.style.display = 'block';
 	    ui.percent.style.display = 'block';
 	  };
-
+ 
 	  undiscordCore.onProgress = (state, stats) => {
 	    // console.log(PREFIX, 'onProgress', state, stats);
 	    let max = state.grandTotal;
 	    const value = state.delCount + state.failCount;
 	    max = Math.max(max, value, 0); // clamp max
-
+ 
 	    // status bar
 	    const percent = value >= 0 && max ? Math.round(value / max * 100) + '%' : '';
 	    const elapsed = msToHMS(Date.now() - stats.startTime.getTime());
 	    const remaining = msToHMS(stats.etr);
 	    ui.percent.innerHTML = `${percent} (${value}/${max}) Elapsed: ${elapsed} Remaining: ${remaining}`;
-
+ 
 	    ui.progressIcon.value = value;
 	    ui.progressMain.value = value;
-
+ 
 	    // indeterminate progress bar
 	    if (max) {
 	      ui.progressIcon.setAttribute('max', max);
@@ -1421,17 +1426,17 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	      ui.progressMain.removeAttribute('value');
 	      ui.percent.innerHTML = '...';
 	    }
-
+ 
 	    // update delays
 	    const searchDelayInput = $('input#searchDelay');
 	    searchDelayInput.value = undiscordCore.options.searchDelay;
 	    $('div#searchDelayValue').textContent = undiscordCore.options.searchDelay+'ms';
-
+ 
 	    const deleteDelayInput = $('input#deleteDelay');
 	    deleteDelayInput.value = undiscordCore.options.deleteDelay;
 	    $('div#deleteDelayValue').textContent = undiscordCore.options.deleteDelay+'ms';
 	  };
-
+ 
 	  undiscordCore.onStop = (state, stats) => {
 	    console.log(PREFIX, 'onStop', state, stats);
 	    $('#start').disabled = false;
@@ -1441,7 +1446,7 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	    ui.percent.style.display = 'none';
 	  };
 	}
-
+ 
 	async function startAction() {
 	  console.log(PREFIX, 'startAction');
 	  // general
@@ -1464,17 +1469,17 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	  //advanced
 	  const searchDelay = parseInt($('input#searchDelay').value.trim());
 	  const deleteDelay = parseInt($('input#deleteDelay').value.trim());
-	 
+ 
 	  // token
 	  const authToken = $('input#token').value.trim() || fillToken();
 	  if (!authToken) return; // get token already logs an error.
-	  
+ 
 	  // validate input
 	  if (!guildId) return log.error('You must fill the "Server ID" field!');
-	 
+ 
 	  // clear logArea
 	  ui.logArea.innerHTML = '';
-
+ 
 	  undiscordCore.resetState();
 	  undiscordCore.options = {
 	    ...undiscordCore.options,
@@ -1499,7 +1504,7 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	      guildId: guildId,
 	      channelId: ch,
 	    }));
-
+ 
 	    try {
 	      await undiscordCore.runBatch(jobs);
 	    } catch (err) {
@@ -1516,14 +1521,14 @@ body.undiscord-pick-message.after [id^="message-content-"]:hover::after {
 	    }
 	  }
 	}
-
+ 
 	function stopAction() {
 	  console.log(PREFIX, 'stopAction');
 	  undiscordCore.stop();
 	}
-
+ 
 	// ---- END Undiscord ----
-
+ 
 	initUI();
-
+ 
 })();
