@@ -650,8 +650,8 @@
  
 	  async search() {
 	    let API_SEARCH_URL;
-	    if (this.options.guildId === '@me') API_SEARCH_URL = `https://discord.com/api/v9/channels/${this.options.channelId}/messages/`; // DMs
-	    else API_SEARCH_URL = `https://discord.com/api/v9/guilds/${this.options.guildId}/messages/`; // Server
+	    if (this.options.guildId === '@me') API_SEARCH_URL = `https://discord.com/api/v10/channels/${this.options.channelId}/messages/`; // DMs
+	    else API_SEARCH_URL = `https://discord.com/api/v10/guilds/${this.options.guildId}/messages/`; // Server
  
 	    let resp;
 	    try {
@@ -788,7 +788,7 @@
 	  }
  
 	  async deleteMessage(message) {
-	    const API_DELETE_URL = `https://discord.com/api/v9/channels/${message.channel_id}/messages/${message.id}`;
+	    const API_DELETE_URL = `https://discord.com/api/v10/channels/${message.channel_id}/messages/${message.id}`;
 	    let resp;
 	    try {
 	      this.beforeRequest();
